@@ -1,7 +1,10 @@
-import { getParamsUrl, getQueriesUrl } from "./utils";
-import { DELETE, GET, POST, PUT, bodyActionssArr } from "./constants";
+import { defaultHeders } from "./defaultAxios";
+import AxiosErrorClone from "./axiosError";
+import { getFullUrl, getHeaders, getRequestObj, isBody } from "./utils/utils";
+import { DELETE, GET, POST, PUT } from "./constants";
 import {
-  AcceptedBody, AxiosResponse, Create, InstanceMethods, OptionalProps, ReqActions, ReqUpdateActions
+  AcceptedBody, AxiosResponse,
+  Create, InstanceMethods, OptionalProps, ReqActions
 } from "./types";
 
 function create(defOptions: Create){
@@ -29,23 +32,17 @@ function create(defOptions: Create){
       ...headers, ...options
     });
 
-  return {
-    get, post, put, remove
-  }
+  return { get, post, put, remove }
 }
 
-async function get<T>(
-  url: string, options?: OptionalProps<T>
-){
+async function get<T>(url: string, options?: OptionalProps<T>){
   const method: ReqActions = { 
     action: GET 
   };
   return await requestMaker(url, method, options);
 }
 
-async function post<T>(
-  url: string, body: AcceptedBody, options?: OptionalProps<T>
-): Promise<AxiosResponse<T> | unknown>{
+async function post<T>(url: string, body: AcceptedBody, options?: OptionalProps<T>){
   const method: ReqActions = {
     action: POST,
     body,
@@ -53,9 +50,7 @@ async function post<T>(
   return await requestMaker<T>(url, method, options);
 }
 
-async function put<T>(
-  url: string, body: AcceptedBody, options?: OptionalProps<T>
-): Promise<AxiosResponse<T> | unknown>{
+async function put<T>(url: string, body: AcceptedBody, options?: OptionalProps<T>){
   const method: ReqActions = {
     action: PUT,
     body,
@@ -63,9 +58,7 @@ async function put<T>(
   return await requestMaker<T>(url, method, options);
 }
 
-async function remove<T>(
-  url: string, options?: OptionalProps<T>
-): Promise<AxiosResponse<T> | unknown>{
+async function remove<T>(url: string, options?: OptionalProps<T>){
   const method: ReqActions = {
     action: DELETE
   };
@@ -73,37 +66,66 @@ async function remove<T>(
 }
 
 async function requestMaker<T>(
-  url: string, method: ReqActions, options?: OptionalProps<T>
+  initUrl: string, method: ReqActions, options?: OptionalProps<T>
 ): Promise<AxiosResponse<T>>
 async function requestMaker<T>(
-  url: string, method: ReqActions, options?: OptionalProps<T>
+  initUrl: string, method: ReqActions, options?: OptionalProps<T>
 ): Promise<unknown>{
-  const { queries, params, headers, responseFn } = options ?? {};
+  const { 
+    queries, params, headers: initReqHeaders, timeout: initTimeout, transformResponse
+  } = options ?? {};
 
-  const queriesUrl = getQueriesUrl(queries);
-  const paramsUrl = getParamsUrl(params);
-  const fullUrl = `${url}${paramsUrl}${queriesUrl}`;
+  const timeout = initTimeout ?? -1;
+  const { action } = method;
+  const url = getFullUrl(initUrl, queries, params);
 
-  const res = await fetch(fullUrl, { 
-    method: method.action,
-    body: isBody(method) ? method.body : null,
-    headers
-  });
+  const reqHeaders = {
+    ...defaultHeders,
+    ...initReqHeaders,
+  }
 
-  if (!res.ok) throw new Error((await res.json()).error);
+  const config = { 
+    url, headers: reqHeaders, method: action, timeout, transformResponse,
+  }
 
-  const json: T = await res.json();
-  
-  if (responseFn) return responseFn(json);
+  const body = isBody(method) ? method.body : null;
+  const res = await fetchTimeOut(url, action, body, timeout, reqHeaders);
 
+  const data = await res.json();
   const { status, statusText } = res;
+  const stringedData = JSON.stringify(data);
+
+  const request = getRequestObj({ url, timeout, status, statusText, stringedData });
+  const resHeaders = getHeaders(res.headers);
+
+  if (!res.ok) {
+    const response = { config, data, headers: resHeaders, request, status, statusText }
+
+    const message = `Request failed with a status code ${status}`;
+    throw new AxiosErrorClone(message, response, request, config);
+  }
+
+  if (transformResponse) return transformResponse(data);
+
   return { 
-    status, statusText, data: json
+    data, status, statusText, headers: resHeaders,  config, request,
   }
 }
 
-function isBody(method: ReqActions): method is ReqUpdateActions{
-  return bodyActionssArr.includes(method.action);
+function fetchTimeOut(
+  url: string, method: string, body: BodyInit | null, timeout: number, headers: HeadersInit
+): Promise<Response>{
+  const controller = new AbortController();
+  const signal = controller.signal;
+
+  if (timeout > 0 ) setTimeout(() => controller.abort(), timeout);
+
+  return fetch(url, { 
+    method,
+    body,
+    headers,
+    signal,
+  });
 }
 
 export default {

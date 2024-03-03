@@ -8,25 +8,17 @@ export interface OptionalProps<T>{
   queries?: {};
   params?: {};
   headers?: HeadersInit; 
-  responseFn?: ResponseFn<T>;
+  timeout?: number;
+  transformResponse?: TransformResponse<T>;
 }
   
 export type AcceptedBody = BodyInit; 
-
-export interface AxiosResponse<T>{
-  status: number;
-  statusText: string;
-  data: T
-}
 
 export interface InstanceMethods<T> {
   url?: string;
   options?: OptionalProps<T>;
 }
 
-export interface Params {
-  key?: string; 
-  value: unknown;
-}
+export type nullableString = string | null;
   
-type ResponseFn<T> = (data: T) => unknown;
+export type TransformResponse<T> = (data: T) => unknown;

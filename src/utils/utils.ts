@@ -1,23 +1,42 @@
-import { Params } from "../types";
+import { bodyActionssArr } from "../constants";
+import { AxiosHeaderRes, ReqActions, ReqUpdateActions, UserRequest } from "../types";
 
-export function getQueriesUrl(queries?: {}): string{
-  if (queries) {
-    const queriesUrl = new URLSearchParams(queries).toString(); 
-    return `?${queriesUrl}`;
-  }
-  return '';
+interface RequestedFromRes{
+  url: string;
+  timeout: number;
+  status: number;
+  statusText: string;
+  stringedData: string;
 }
 
-export function getParamsUrl(params?: {}): string{
-  if (params) {
-    const entries = Object.entries(params);
-
-    let url = '';
-    for (const entry of entries) {
-      url += `/${entry[0]}/${entry[1]}`;
-    }
-    return url;
-  }
-
-  return '';
+export function getFullUrl( initUrl: string, queries?: {}, params?: {}){
+  const queriesUrl = getQueriesUrl(queries);
+  return `${initUrl}${queriesUrl}`
 }
+
+function getQueriesUrl(queries?: {}): string{
+  if (!queries) return '';
+
+  const queriesUrl = new URLSearchParams(queries).toString(); 
+  return `?${queriesUrl}`;
+}
+
+export const getRequestObj = (
+  { url, timeout, status, statusText, stringedData }: RequestedFromRes 
+): UserRequest => ({
+  responseUrl: url, 
+  status,
+  statusText, 
+  timeout,
+  response: stringedData, 
+  responseText: stringedData
+});
+
+export const getHeaders = (headers: Headers): AxiosHeaderRes => ({
+  'content-length': headers.get('Content-Length'),
+  'content-type': headers.get('Content-Type'),
+  'date': headers.get('Date'),
+});
+
+export const isBody = (method: ReqActions): method is ReqUpdateActions => 
+  bodyActionssArr.includes(method.action);
