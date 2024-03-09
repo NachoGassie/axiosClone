@@ -1,6 +1,6 @@
 export interface Create{
   baseURL: string;
-  // timeout?: number;
+  timeout?: number;
   headers?: HeadersInit;
 }
 
@@ -14,11 +14,11 @@ export interface OptionalProps<T>{
   
 export type AcceptedBody = BodyInit; 
 
-export interface InstanceMethods<T> {
+export interface InstanceCall<T> extends OptionalProps<T>{
   url?: string;
-  options?: OptionalProps<T>;
 }
 
 export type nullableString = string | null;
+export type nullableBody = BodyInit | null;
   
 export type TransformResponse<T> = (data: T) => unknown;

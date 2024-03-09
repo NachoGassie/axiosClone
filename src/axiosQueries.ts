@@ -3,65 +3,59 @@ import AxiosErrorClone from "./axiosError";
 import { getFullUrl, getHeaders, getRequestObj, isBody } from "./utils/utils";
 import { DELETE, GET, POST, PUT } from "./constants";
 import {
-  AcceptedBody, AxiosResponse,
-  Create, InstanceMethods, OptionalProps, ReqActions
+  AcceptedBody, AxiosResponse, Create, InstanceCall, OptionalProps, ReqActions, nullableBody
 } from "./types";
 
 function create(defOptions: Create){
-  const { baseURL, headers } = defOptions;
+  const { baseURL, headers: instanceHeaders, timeout } = defOptions;
 
-  const getFullUrl = (url?: string) => `${baseURL}${url ? url : ''}`;
+  const makeRequest = <T>(method: ReqActions, call?: InstanceCall<T>) => {
+    const { url, headers: callHeaders, ...options } = call ?? {};
+    const fullUrl = `${baseURL}${url ? url : ''}`;
 
-  const get = <T>(url?: string, options?: OptionalProps<T>) => 
-    requestMaker(getFullUrl(url), {action: GET}, {
-      ...headers, ...options
+    const headers = {...instanceHeaders, ...(callHeaders ?? {})}
+
+    return requestMaker(fullUrl, method, {
+      headers, timeout, ...options
     });
+  }
 
-  const post = <T>(body: AcceptedBody, {url, options}: InstanceMethods<T>) => 
-    requestMaker(getFullUrl(url), {action: POST, body}, {
-      ...headers, ...options
-    });
+  const get = <T>(
+    instance?: InstanceCall<T>
+  ) => makeRequest({ action: GET }, instance);
+  
+  const post = <T>(
+    body: AcceptedBody, instance?: InstanceCall<T>
+  ) => makeRequest({ action: POST, body }, instance);
 
-  const put = <T>(body: AcceptedBody, {url, options}: InstanceMethods<T>) => 
-    requestMaker(getFullUrl(url), {action:PUT, body}, {
-      ...headers, ...options
-    });
+  const put = <T>(
+    body: AcceptedBody, instance?: InstanceCall<T>
+  ) => makeRequest({ action: PUT, body }, instance);
 
-  const remove = <T>({url, options}: InstanceMethods<T>) => 
-    requestMaker(getFullUrl(url), {action: DELETE}, {
-      ...headers, ...options
-    });
+  const remove = <T>(
+    instance?: InstanceCall<T>
+  ) => makeRequest({ action: DELETE }, instance);
 
   return { get, post, put, remove }
 }
 
 async function get<T>(url: string, options?: OptionalProps<T>){
-  const method: ReqActions = { 
-    action: GET 
-  };
+  const method: ReqActions = { action: GET };
   return await requestMaker(url, method, options);
 }
 
 async function post<T>(url: string, body: AcceptedBody, options?: OptionalProps<T>){
-  const method: ReqActions = {
-    action: POST,
-    body,
-  }
+  const method: ReqActions = { action: POST, body }
   return await requestMaker<T>(url, method, options);
 }
 
 async function put<T>(url: string, body: AcceptedBody, options?: OptionalProps<T>){
-  const method: ReqActions = {
-    action: PUT,
-    body,
-  }
+  const method: ReqActions = { action: PUT, body }
   return await requestMaker<T>(url, method, options);
 }
 
 async function remove<T>(url: string, options?: OptionalProps<T>){
-  const method: ReqActions = {
-    action: DELETE
-  };
+  const method: ReqActions = { action: DELETE };
   return await requestMaker(url, method, options);
 }
 
@@ -75,7 +69,7 @@ async function requestMaker<T>(
     queries, params, headers: initReqHeaders, timeout: initTimeout, transformResponse
   } = options ?? {};
 
-  const timeout = initTimeout ?? -1;
+  const timeout = initTimeout ?? 0;
   const { action } = method;
   const url = getFullUrl(initUrl, queries, params);
 
@@ -84,12 +78,8 @@ async function requestMaker<T>(
     ...initReqHeaders,
   }
 
-  const config = { 
-    url, headers: reqHeaders, method: action, timeout, transformResponse,
-  }
-
   const body = isBody(method) ? method.body : null;
-  const res = await fetchTimeOut(url, action, body, timeout, reqHeaders);
+  const res: Response = await fetchTimeOut(url, action, body, timeout, reqHeaders);
 
   const data = await res.json();
   const { status, statusText } = res;
@@ -97,6 +87,7 @@ async function requestMaker<T>(
 
   const request = getRequestObj({ url, timeout, status, statusText, stringedData });
   const resHeaders = getHeaders(res.headers);
+  const config = { url, headers: reqHeaders, method: action, timeout, transformResponse }
 
   if (!res.ok) {
     const response = { config, data, headers: resHeaders, request, status, statusText }
@@ -113,8 +104,8 @@ async function requestMaker<T>(
 }
 
 function fetchTimeOut(
-  url: string, method: string, body: BodyInit | null, timeout: number, headers: HeadersInit
-): Promise<Response>{
+  url: string, method: string, body: nullableBody, timeout: number, headers: HeadersInit
+){
   const controller = new AbortController();
   const signal = controller.signal;
 
