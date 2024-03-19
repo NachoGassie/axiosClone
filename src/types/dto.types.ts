@@ -1,11 +1,6 @@
+import AxiosReq from "../lib/AxiosRequest";
 import { Methods } from "./actions.types";
-import { TransformResponse, nullableString, } from "./types";
-
-export interface AxiosHeaderRes {
-  'content-length': nullableString;
-  'content-type': nullableString;
-  date: nullableString;
-}
+import { TransformResponse } from "./types";
 
 export interface Config {
   headers: HeadersInit;
@@ -17,29 +12,30 @@ export interface Config {
 
 // OK
 export interface AxiosResponse<T>{
-  headers: AxiosHeaderRes;
+  headers: Headers;
   status: number;
   statusText: string;
   data: T;
   config: Config;
-  request: UserRequest;
+  request: AxiosReq;
 }
 
 // ERROR
 export interface AxiosErrorResponse{
   data: any;
-  headers: AxiosHeaderRes;
+  headers: Headers;
   status: number;
   statusText: string;
   config: Config;
 }
 
 // REQUEST
-export interface UserRequest{
-  response: string;
-  responseText: string;
-  responseUrl: string;
-  status: number;
-  statusText: string;
-  timeout: number;
+export type CorsMode = 'cors' | 'no-cors' | 'same-origin' | 'navigate';
+
+export interface AxiosDefReq {
+  cache: RequestCache;
+  credentials: RequestCredentials;
+  headers: HeadersInit;
+  method: Methods;
+  mode: CorsMode;
 }

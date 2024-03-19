@@ -1,3 +1,67 @@
-This is an open-source Axios clone, based on the 1.6.7 version.
-It will be uploaded to the npm store once it is finished. 
-In the meantime, you are free to try it by cloning the repository and integrating the folder in any project you have to test out the fetch functions and provide valuable insights.
+# Open-source Axios clone
+
+## This is a clone with non-commercial interests, for learning purposes only
+
+This project was made to get a deeper understanding of the Feth API and TypeScript functionality.  
+Feel free to test out the fetch functions and provide valuable PR.
+
+## To Make a Crud
+
+#### GET
+```
+import AxiosClone from 'axios-clone';
+
+AxiosClone.get('http://exampleurl')
+    .then(res => res.data)
+    .catch(err => console.log(err));
+```
+
+### DELETE
+```
+import AxiosClone from 'axios-clone';
+
+AxiosClone.delete('http://exampleurl/id/123');
+```
+
+### POST / PUT / PATCH
+They receive two obligatory params, the url (as in GET and DELETE) and a body in FormData and string format.
+```
+import AxiosClone from 'axios-clone';
+
+const body = {
+    email: 'email@mail.com',
+    password: 'password',
+}
+
+const bodyToSend = 
+
+AxiosClone.post('http://exampleurl', body, {
+    headers: { Authorization: `Bearer mytoken` }
+});
+```
+
+### Optional Values
+You can add params and queries directly to the url
+
+``http://exampleurl/id/123?query=value``
+
+or in Json format
+```
+{
+    queries: { query: value },
+    params: { id: 123 },
+}
+```
+In the Json you can as well add timeout in ms, cache to handle the web cache, credentials, mode for cors-mode, headers and a transformResponse function to manipulate the data.
+```
+{
+    queries: { query: value },
+    params: { id: 123 },
+    timeout: 100,
+    cache: 'default',
+    credentials: 'same-origin',
+    mode: 'cors',
+    headers: { "Accept": "application/json" },
+    transformResponse: ((data) => console.log(data))
+}
+```

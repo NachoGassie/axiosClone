@@ -1,12 +1,12 @@
-import { AxiosErrorResponse, Config, UserRequest } from "./types";
+import { AxiosErrorResponse, Config } from "../types";
 
 export default class AxiosErrorClone extends Error{
-  response: AxiosErrorResponse;
-  request: UserRequest;
-  config: Config;
+  private response: AxiosErrorResponse;
+  private request: Request;
+  private config: Config;
   
   constructor(
-    message: string, response: AxiosErrorResponse, request: UserRequest, config: Config
+    message: string, response: AxiosErrorResponse, request: Request, config: Config
   ){
     super(message);
     Error.call(this);
@@ -40,13 +40,3 @@ export default class AxiosErrorClone extends Error{
     return `AxiosErrorClone: ${this.message}. Response: ${JSON.stringify(this.toJSON())}.`;
   }
 }
-// export default class AxiosErrorClone extends Error{
-//   // static fromJSON(json: any) {
-//   //   const { message, response } = json;
-//   //   return new AxiosErrorClone(message, response);
-//   // }
-//   // throwJsonError() {
-//   //   const errorJsonString = JSON.stringify(this.toJSON());
-//   //   throw new Error(errorJsonString);
-//   // }
-// }

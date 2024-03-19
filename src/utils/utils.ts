@@ -1,42 +1,53 @@
-import { bodyActionssArr } from "../constants";
-import { AxiosHeaderRes, ReqActions, ReqUpdateActions, UserRequest } from "../types";
+import { ContTypeValue, bodyActionssArr } from "../constants";
+import { ReqActions, ReqUpdateActions, jsonObj, stringKeyValue } from "../types";
 
-interface RequestedFromRes{
-  url: string;
-  timeout: number;
-  status: number;
-  statusText: string;
-  stringedData: string;
+export function getFullUrl(initUrl: string, queries?: jsonObj, params?: jsonObj){
+  const parsedParams = params ? getParamsUrl(params) : '';
+  const parsedQueries = queries ? getQueriesUrl(queries) : '';
+
+  return `${initUrl}${parsedParams}${parsedQueries}`;
 }
 
-export function getFullUrl( initUrl: string, queries?: {}, params?: {}){
-  const queriesUrl = getQueriesUrl(queries);
-  return `${initUrl}${queriesUrl}`
+function getParamsUrl(params: jsonObj){
+  const paramsArr = Object.entries(params).map(([key, value]) => `/${key}/${value}`);
+  return paramsArr.join('');
 }
 
-function getQueriesUrl(queries?: {}): string{
-  if (!queries) return '';
-
+function getQueriesUrl(queries: jsonObj): string{
   const queriesUrl = new URLSearchParams(queries).toString(); 
   return `?${queriesUrl}`;
 }
 
-export const getRequestObj = (
-  { url, timeout, status, statusText, stringedData }: RequestedFromRes 
-): UserRequest => ({
-  responseUrl: url, 
-  status,
-  statusText, 
-  timeout,
-  response: stringedData, 
-  responseText: stringedData
-});
+export function getContType(body: BodyInit){
+  if(body instanceof Blob) return ContTypeValue.octetStream;
+  const bodyType = typeof body;
+  
+  if (typeof body === 'string') {
+    try {
+      JSON.parse(body);
+      return ContTypeValue.AppJson;
+    } catch (e) { 
+      return ContTypeValue.textPlain;
+    }
+  } 
 
-export const getHeaders = (headers: Headers): AxiosHeaderRes => ({
-  'content-length': headers.get('Content-Length'),
-  'content-type': headers.get('Content-Type'),
-  'date': headers.get('Date'),
-});
+  return ContTypeValue.AppJson;
+}
+
+export function getHeaders(headers: Headers): Headers{
+  const tmpHeaders: stringKeyValue = {};
+
+  const keys = headers.entries();
+  let k = keys.next();
+
+  while (!k.done) {
+    const {value} = k;
+    tmpHeaders[value[0]] = value[1];
+    k = keys.next();
+  }
+
+  return { ...tmpHeaders, ...headers, }
+};
 
 export const isBody = (method: ReqActions): method is ReqUpdateActions => 
   bodyActionssArr.includes(method.action);

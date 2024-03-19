@@ -1,18 +1,25 @@
 {
   "name": "axios-clone",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "tsc": "tsc",
-    "dev": "ts-node-dev src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "version": "1.2.1",
+  "description": "axios clone with non-commercial interests",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "repository": {
+    "url": "https://github.com/NachoGassie/axiosClone"
   },
-  "keywords": [],
+  "scripts": {
+    "build": "tsup"
+  },
+  "keywords": [
+    "axios",
+    "clone",
+    "fetch"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
-    "ts-node-dev": "^2.0.0",
+    "tsup": "^8.0.2",
     "typescript": "^5.3.3"
   }
 }
