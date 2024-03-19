@@ -35,8 +35,10 @@ const body = {
 
 const bodyToSend = 
 
-AxiosClone.post('http://exampleurl', body, {
-    headers: { Authorization: `Bearer mytoken` }
+AxiosClone.post(body, {
+    url?: extraUrl
+    headers?: { Authorization: `Bearer mytoken` }
+    ...
 });
 ```
 
