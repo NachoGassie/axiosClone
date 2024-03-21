@@ -1,6 +1,7 @@
 import { CorsMode } from "./dto.types";
 
 export type jsonObj = Record<string, any>;
+export type AcceptedBody = BodyInit | jsonObj;
 
 export type nullableString = string | null;
 export type nullableBody = BodyInit | null;
@@ -25,10 +26,6 @@ export interface OptionalReqValues<T>{
   cache?: RequestCache; 
   credentials?: RequestCredentials;
   mode?: CorsMode;
-}
-
-export interface InstanceCall<T> extends OptionalProps<T>{
-  url?: string;
 }
 
 export type TransformResponse<T> = (data: T) => unknown;

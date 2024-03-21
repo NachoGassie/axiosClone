@@ -1,19 +1,19 @@
 import { ContentType, DELETE, GET, PATCH, POST, PUT } from "./constants";
 import { defaultTimeOut } from "./defaulltValues";
-import AxiosHeaders from "./lib/AxiosHeaders";
-import AxiosReq from "./lib/AxiosRequest";
-import AxiosErrorClone from "./lib/axiosError";
+import { AxiosHeaders, AxiosError, AxiosRequest } from './lib'
+
 import {
-  AxiosResponse, Create, InstanceCall, OptionalProps, OptionalReqValues, ReqActions
+  AcceptedBody,
+  AxiosResponse, Create, OptionalProps, OptionalReqValues, ReqActions
 } from "./types";
-import { getContType, getFullUrl, getHeaders, isBody } from "./utils/utils";
+import { getBody, getFullUrl, getHeaders, isBody } from "./utils";
 
 function create(defOptions: Create){
   const { baseURL, headers: instanceHeaders, timeout } = defOptions;
 
-  const makeRequest = <T>(method: ReqActions, call?: InstanceCall<T>) => {
-    const { url, headers: callHeaders, ...options } = call ?? {};
-    const fullUrl = `${baseURL}${url ? url : ''}`;
+  const makeRequest = <T>(url: string, method: ReqActions, call?: OptionalProps<T>) => {
+    const { headers: callHeaders, ...options } = call ?? {};
+    const fullUrl = `${baseURL}${url}`;
 
     let headers = undefined;
 
@@ -30,22 +30,26 @@ function create(defOptions: Create){
   }
 
   const get = <T>(
-    instance?: InstanceCall<T>
-  ) => makeRequest({ action: GET }, instance);
+    url: string, instance?: OptionalProps<T>
+  ) => makeRequest(url, { action: GET }, instance);
   
   const post = <T>(
-    body: BodyInit, instance?: InstanceCall<T>
-  ) => makeRequest({ action: POST, body }, instance);
+    url: string, body: AcceptedBody, instance?: OptionalProps<T>
+  ) => makeRequest(url, { action: POST, body }, instance);
 
   const put = <T>(
-    body: BodyInit, instance?: InstanceCall<T>
-  ) => makeRequest({ action: PUT, body }, instance);
+    url: string, body: AcceptedBody, instance?: OptionalProps<T>
+  ) => makeRequest(url, { action: PUT, body }, instance);
+
+  const patch = <T>(
+    url: string, body: AcceptedBody, instance?: OptionalProps<T>
+  ) => makeRequest(url, { action: PATCH, body }, instance);
 
   const remove = <T>(
-    instance?: InstanceCall<T>
-  ) => makeRequest({ action: DELETE }, instance);
+    url: string, instance?: OptionalProps<T>
+  ) => makeRequest(url, { action: DELETE }, instance);
 
-  return { get, post, put, remove }
+  return { get, post, put, patch, remove }
 }
 
 async function get<T>(url: string, options?: OptionalProps<T>){
@@ -53,16 +57,16 @@ async function get<T>(url: string, options?: OptionalProps<T>){
   return await requestMaker(url, method, options);
 }
 
-async function post<T>(url: string, body: BodyInit, options?: OptionalProps<T>){
+async function post<T>(url: string, body: AcceptedBody, options?: OptionalProps<T>){
   const method: ReqActions = { action: POST, body }
   return await requestMaker<T>(url, method, options);
 }
 
-async function put<T>(url: string, body: BodyInit, options?: OptionalProps<T>){
+async function put<T>(url: string, body: AcceptedBody, options?: OptionalProps<T>){
   const method: ReqActions = { action: PUT, body }
   return await requestMaker<T>(url, method, options);
 }
-async function patch<T>(url: string, body: BodyInit, options?: OptionalProps<T>){
+async function patch<T>(url: string, body: AcceptedBody, options?: OptionalProps<T>){
   const method: ReqActions = { action: PATCH, body }
   return await requestMaker<T>(url, method, options);
 }
@@ -74,10 +78,7 @@ async function remove<T>(url: string, options?: OptionalProps<T>){
 
 async function requestMaker<T>(
   initUrl: string, method: ReqActions, options?: OptionalProps<T>
-): Promise<AxiosResponse<T>>
-async function requestMaker<T>(
-  initUrl: string, method: ReqActions, options?: OptionalProps<T>
-): Promise<unknown>{
+): Promise<AxiosResponse<T>>{
   const { 
     queries, params, transformResponse, ...restOptions
   } = options ?? {};
@@ -90,7 +91,7 @@ async function requestMaker<T>(
 
   const resHeaders = getHeaders(res.headers);
 
-  const data = await res.json();
+  let data = await res.json();
   const { status, statusText } = res;
 
   const config = { url, headers: reqHeaders, method: action, timeout, transformResponse }
@@ -99,10 +100,10 @@ async function requestMaker<T>(
     const response = { config, data, headers: resHeaders, request, status, statusText }
 
     const message = `Request failed with a status code ${status}`;
-    throw new AxiosErrorClone(message, response, request, config);
+    throw new AxiosError(message, response, request, config);
   }
 
-  if (transformResponse) return transformResponse(data);
+  if (transformResponse) data = transformResponse(data);
 
   return { 
     data, status, statusText, headers: resHeaders, config, request,
@@ -122,14 +123,16 @@ async function handleRequest<T>(url: string, method: ReqActions, options: Option
   if (initHeaders) headers = new AxiosHeaders(initHeaders);
   else headers = new AxiosHeaders();
 
-  const body = isBody(method) ? method.body : null;
+  let body = null;
 
-  if (body) {
-    if (body instanceof FormData) headers.delete(ContentType);
-    else headers.set(ContentType, getContType(body));
+  if (isBody(method)) {
+    const { tmpBody, contType } = getBody(method.body);
+    body = tmpBody;
+    if (contType === '') headers.delete(ContentType);
+    else headers.set(ContentType, contType);
   }
-
-  const req = new AxiosReq(url, action, body, headers, mode, cache, credentials);
+  
+  const req = new AxiosRequest(url, action, body, headers, mode, cache, credentials);
 
   const res = await fetchTimeOut(req, timeout);
 

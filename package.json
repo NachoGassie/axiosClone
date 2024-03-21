@@ -1,6 +1,6 @@
 {
   "name": "axios-clone",
-  "version": "1.2.0",
+  "version": "1.2.4",
   "description": "axios clone with non-commercial interests",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -9,7 +9,8 @@
     "url": "https://github.com/NachoGassie/axiosClone"
   },
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "test": "vitest"
   },
   "keywords": [
     "axios",
@@ -19,7 +20,9 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "msw": "^2.2.9",
     "tsup": "^8.0.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^1.4.0"
   }
 }

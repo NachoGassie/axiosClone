@@ -12,6 +12,6 @@
     "noEmit": true,
     "outDir": "dist"
   },
-  "include": ["src"],
+  "include": ["src", "test/axiosClone.test.ts"],
   "exclude": ["node_modules"]
 }

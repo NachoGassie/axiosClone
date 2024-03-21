@@ -21,6 +21,9 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var src_exports = {};
 __export(src_exports, {
   AxiosDefaultRequest: () => AxiosDefaultRequest,
+  AxiosError: () => AxiosErrorClone,
+  AxiosHeaders: () => AxiosHeaders,
+  AxiosRequest: () => AxiosReq,
   ContTypeValue: () => ContTypeValue,
   ContentType: () => ContentType,
   DELETE: () => DELETE,
@@ -107,19 +110,6 @@ var AxiosErrorClone = class _AxiosErrorClone extends Error {
     }
     Object.setPrototypeOf(this, _AxiosErrorClone.prototype);
   }
-  toJSON() {
-    return {
-      response: this.response,
-      request: this.request,
-      config: this.config,
-      name: this.name,
-      message: this.message,
-      stack: this.stack
-    };
-  }
-  toString = () => {
-    return `AxiosErrorClone: ${this.message}. Response: ${JSON.stringify(this.toJSON())}.`;
-  };
 };
 
 // src/utils/utils.ts
@@ -135,6 +125,18 @@ function getParamsUrl(params) {
 function getQueriesUrl(queries) {
   const queriesUrl = new URLSearchParams(queries).toString();
   return `?${queriesUrl}`;
+}
+function getBody(tmpBody) {
+  if (!(typeof tmpBody === "string") && !(tmpBody instanceof FormData) && !(tmpBody instanceof Blob) && !(tmpBody instanceof URLSearchParams)) {
+    return {
+      tmpBody: JSON.stringify(tmpBody),
+      contType: ContTypeValue.AppJson
+    };
+  }
+  let contType = "";
+  if (!(tmpBody instanceof FormData))
+    contType = getContType(tmpBody);
+  return { tmpBody, contType };
 }
 function getContType(body) {
   if (body instanceof Blob)
@@ -166,9 +168,9 @@ var isBody = (method) => bodyActionssArr.includes(method.action);
 // src/axiosClone.ts
 function create(defOptions) {
   const { baseURL, headers: instanceHeaders, timeout } = defOptions;
-  const makeRequest = (method, call) => {
-    const { url, headers: callHeaders, ...options } = call ?? {};
-    const fullUrl = `${baseURL}${url ? url : ""}`;
+  const makeRequest = (url, method, call) => {
+    const { headers: callHeaders, ...options } = call ?? {};
+    const fullUrl = `${baseURL}${url}`;
     let headers = void 0;
     if (instanceHeaders && !callHeaders)
       headers = new Headers(instanceHeaders);
@@ -183,11 +185,12 @@ function create(defOptions) {
       ...options
     });
   };
-  const get2 = (instance) => makeRequest({ action: GET }, instance);
-  const post2 = (body, instance) => makeRequest({ action: POST, body }, instance);
-  const put2 = (body, instance) => makeRequest({ action: PUT, body }, instance);
-  const remove2 = (instance) => makeRequest({ action: DELETE }, instance);
-  return { get: get2, post: post2, put: put2, remove: remove2 };
+  const get2 = (url, instance) => makeRequest(url, { action: GET }, instance);
+  const post2 = (url, body, instance) => makeRequest(url, { action: POST, body }, instance);
+  const put2 = (url, body, instance) => makeRequest(url, { action: PUT, body }, instance);
+  const patch2 = (url, body, instance) => makeRequest(url, { action: PATCH, body }, instance);
+  const remove2 = (url, instance) => makeRequest(url, { action: DELETE }, instance);
+  return { get: get2, post: post2, put: put2, patch: patch2, remove: remove2 };
 }
 async function get(url, options) {
   const method = { action: GET };
@@ -225,7 +228,7 @@ async function requestMaker(initUrl, method, options) {
     timeout
   } = await handleRequest(url, method, restOptions);
   const resHeaders = getHeaders(res.headers);
-  const data = await res.json();
+  let data = await res.json();
   const { status, statusText } = res;
   const config = { url, headers: reqHeaders, method: action, timeout, transformResponse };
   if (!res.ok) {
@@ -234,7 +237,7 @@ async function requestMaker(initUrl, method, options) {
     throw new AxiosErrorClone(message, response, request, config);
   }
   if (transformResponse)
-    return transformResponse(data);
+    data = transformResponse(data);
   return {
     data,
     status,
@@ -259,12 +262,14 @@ async function handleRequest(url, method, options) {
     headers = new AxiosHeaders(initHeaders);
   else
     headers = new AxiosHeaders();
-  const body = isBody(method) ? method.body : null;
-  if (body) {
-    if (body instanceof FormData)
+  let body = null;
+  if (isBody(method)) {
+    const { tmpBody, contType } = getBody(method.body);
+    body = tmpBody;
+    if (contType === "")
       headers.delete(ContentType);
     else
-      headers.set(ContentType, getContType(body));
+      headers.set(ContentType, contType);
   }
   const req = new AxiosReq(url, action, body, headers, mode, cache, credentials);
   const res = await fetchTimeOut(req, timeout);
@@ -291,6 +296,9 @@ var src_default = axiosClone_default;
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   AxiosDefaultRequest,
+  AxiosError,
+  AxiosHeaders,
+  AxiosRequest,
   ContTypeValue,
   ContentType,
   DELETE,

@@ -24,7 +24,7 @@ AxiosClone.delete('http://exampleurl/id/123');
 ```
 
 ### POST / PUT / PATCH
-They receive two obligatory params, the url (as in GET and DELETE) and a body in FormData and string format.
+They receive two obligatory params, the url (as in GET and DELETE) and a body in FormData, JSON and string format.
 ```
 import AxiosClone from 'axios-clone';
 
@@ -66,4 +66,23 @@ In the Json you can as well add timeout in ms, cache to handle the web cache, cr
     headers: { "Accept": "application/json" },
     transformResponse: ((data) => console.log(data))
 }
+```
+
+## Create
+Allows to give default and reusable values to every request from an instance
+
+```
+const instance = AxiosClone.create({
+    baseURL: 'http://exampleurl',
+    timeout: 100,
+    headers: { Authorization: `Bearer mytoken` }
+});
+
+const getReq = await instace.get('',{
+    // optional values to add / overWrite
+})
+
+const putReq = await instance.put(`/${id}`, body, {
+    ...
+});
 ```

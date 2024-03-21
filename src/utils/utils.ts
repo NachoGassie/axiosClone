@@ -1,5 +1,5 @@
 import { ContTypeValue, bodyActionssArr } from "../constants";
-import { ReqActions, ReqUpdateActions, jsonObj, stringKeyValue } from "../types";
+import { AcceptedBody, ReqActions, ReqUpdateActions, jsonObj, stringKeyValue } from "../types";
 
 export function getFullUrl(initUrl: string, queries?: jsonObj, params?: jsonObj){
   const parsedParams = params ? getParamsUrl(params) : '';
@@ -18,7 +18,24 @@ function getQueriesUrl(queries: jsonObj): string{
   return `?${queriesUrl}`;
 }
 
-export function getContType(body: BodyInit){
+export function getBody(tmpBody: AcceptedBody){
+  if (
+    !(typeof tmpBody === 'string') && !(tmpBody instanceof FormData) 
+    && !(tmpBody instanceof Blob) && !(tmpBody instanceof URLSearchParams)
+  ){
+    return {
+      tmpBody: JSON.stringify(tmpBody),
+      contType: ContTypeValue.AppJson
+    }
+  }
+
+  let contType = '';
+  if (!(tmpBody instanceof FormData)) contType = getContType(tmpBody);
+
+  return { tmpBody, contType }
+}
+
+function getContType(body: BodyInit){
   if(body instanceof Blob) return ContTypeValue.octetStream;
   const bodyType = typeof body;
   

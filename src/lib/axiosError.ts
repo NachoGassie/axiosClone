@@ -1,9 +1,9 @@
 import { AxiosErrorResponse, Config } from "../types";
 
 export default class AxiosErrorClone extends Error{
-  private response: AxiosErrorResponse;
-  private request: Request;
-  private config: Config;
+  response: AxiosErrorResponse;
+  request: Request;
+  config: Config;
   
   constructor(
     message: string, response: AxiosErrorResponse, request: Request, config: Config
@@ -24,19 +24,4 @@ export default class AxiosErrorClone extends Error{
     
     Object.setPrototypeOf(this, AxiosErrorClone.prototype);
   }  
-
-  toJSON(){
-    return {
-      response: this.response,
-      request: this.request,
-      config: this.config,
-      name: this.name,
-      message: this.message,
-      stack: this.stack,
-    }
-  }
-
-  toString = () => {
-    return `AxiosErrorClone: ${this.message}. Response: ${JSON.stringify(this.toJSON())}.`;
-  }
 }
