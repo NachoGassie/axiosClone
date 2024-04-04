@@ -20,7 +20,7 @@ AxiosClone.get('http://exampleurl')
 ```
 import AxiosClone from 'axios-clone';
 
-AxiosClone.delete('http://exampleurl/id/123');
+AxiosClone.remove('http://exampleurl/id/123');
 ```
 
 ### POST / PUT / PATCH

@@ -1,10 +1,11 @@
 import { DELETE, GET, HEAD, PATCH, POST, PUT } from "../constants/http.constants";
 import { AcceptedBody } from "./types";
 
-export type ReqUpdateActions = 
-  | {action: typeof POST, body: AcceptedBody} 
-  | {action: typeof PUT, body: AcceptedBody} 
-  | {action: typeof PATCH, body: AcceptedBody} 
+export type ReqUpdateActions = { body: AcceptedBody } & (
+  | {action: typeof POST} 
+  | {action: typeof PUT} 
+  | {action: typeof PATCH} 
+);
 
 export type ReqActions = 
   | ReqUpdateActions

@@ -1,6 +1,6 @@
 {
   "name": "axios-clone",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "axios clone with non-commercial interests",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

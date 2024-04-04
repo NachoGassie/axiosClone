@@ -37,7 +37,6 @@ export function getBody(tmpBody: AcceptedBody){
 
 function getContType(body: BodyInit){
   if(body instanceof Blob) return ContTypeValue.octetStream;
-  const bodyType = typeof body;
   
   if (typeof body === 'string') {
     try {
