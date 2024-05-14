@@ -1,12 +1,12 @@
 import { AxiosErrorResponse, Config } from "../types";
 
 export default class AxiosErrorClone extends Error{
-  response: AxiosErrorResponse;
+  response: AxiosErrorResponse | Error;
   request: Request;
   config: Config;
   
   constructor(
-    message: string, response: AxiosErrorResponse, request: Request, config: Config
+    message: string, response: AxiosErrorResponse | Error, request: Request, config: Config
   ){
     super(message);
     Error.call(this);
