@@ -7,6 +7,15 @@ Feel free to test out the fetch functions and provide valuable PR.
 
 ## To Make a Crud
 
+#### HEAD
+```
+import AxiosClone from 'axios-clone';
+
+AxiosClone.head('http://exampleurl')
+    .then(res => res)
+    .catch(err => console.log(err));
+```
+
 #### GET
 ```
 import AxiosClone from 'axios-clone';
