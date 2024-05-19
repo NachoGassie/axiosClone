@@ -68,15 +68,14 @@ interface OptionalReqValues<T> {
 type TransformResponse<T> = (data: T) => unknown;
 
 type ReqUpdateActions = {
-    action: typeof POST;
     body: AcceptedBody;
+} & ({
+    action: typeof POST;
 } | {
     action: typeof PUT;
-    body: AcceptedBody;
 } | {
     action: typeof PATCH;
-    body: AcceptedBody;
-};
+});
 type ReqActions = ReqUpdateActions | {
     action: typeof HEAD;
 } | {
@@ -87,12 +86,14 @@ type ReqActions = ReqUpdateActions | {
 type Methods = typeof HEAD | typeof GET | typeof POST | typeof PUT | typeof PATCH | typeof DELETE;
 
 declare function create(defOptions: Create): {
-    get: <T>(url: string, instance?: OptionalProps<T> | undefined) => Promise<AxiosResponse<T>>;
-    post: <T_1>(url: string, body: AcceptedBody, instance?: OptionalProps<T_1> | undefined) => Promise<AxiosResponse<T_1>>;
-    put: <T_2>(url: string, body: AcceptedBody, instance?: OptionalProps<T_2> | undefined) => Promise<AxiosResponse<T_2>>;
-    patch: <T_3>(url: string, body: AcceptedBody, instance?: OptionalProps<T_3> | undefined) => Promise<AxiosResponse<T_3>>;
-    remove: <T_4>(url: string, instance?: OptionalProps<T_4> | undefined) => Promise<AxiosResponse<T_4>>;
+    head: <T>(url: string, call?: OptionalProps<T> | undefined) => Promise<AxiosResponse<T>>;
+    get: <T_1>(url: string, call?: OptionalProps<T_1> | undefined) => Promise<AxiosResponse<T_1>>;
+    post: <T_2>(url: string, body: AcceptedBody, call?: OptionalProps<T_2> | undefined) => Promise<AxiosResponse<T_2>>;
+    put: <T_3>(url: string, body: AcceptedBody, call?: OptionalProps<T_3> | undefined) => Promise<AxiosResponse<T_3>>;
+    patch: <T_4>(url: string, body: AcceptedBody, call?: OptionalProps<T_4> | undefined) => Promise<AxiosResponse<T_4>>;
+    remove: <T_5>(url: string, call?: OptionalProps<T_5> | undefined) => Promise<AxiosResponse<T_5>>;
 };
+declare function head<T>(url: string, options?: OptionalProps<T>): Promise<AxiosResponse<T>>;
 declare function get<T>(url: string, options?: OptionalProps<T>): Promise<AxiosResponse<T>>;
 declare function post<T>(url: string, body: AcceptedBody, options?: OptionalProps<T>): Promise<AxiosResponse<T>>;
 declare function put<T>(url: string, body: AcceptedBody, options?: OptionalProps<T>): Promise<AxiosResponse<T>>;
@@ -100,6 +101,7 @@ declare function patch<T>(url: string, body: AcceptedBody, options?: OptionalPro
 declare function remove<T>(url: string, options?: OptionalProps<T>): Promise<AxiosResponse<T>>;
 declare const _default: {
     create: typeof create;
+    head: typeof head;
     get: typeof get;
     post: typeof post;
     put: typeof put;
@@ -114,7 +116,7 @@ declare const ContTypeValue: {
     readonly octetStream: "application/octet-stream";
 };
 
-declare const defaultTimeOut = -1;
+declare const DEFTIMEOUT = -1;
 declare const defaultHeaders: HeadersInit;
 declare const AxiosDefaultRequest: AxiosDefReq;
 
@@ -123,10 +125,10 @@ declare class AxiosHeaders extends Headers {
 }
 
 declare class AxiosErrorClone extends Error {
-    response: AxiosErrorResponse;
+    response: AxiosErrorResponse | Error;
     request: Request;
     config: Config;
-    constructor(message: string, response: AxiosErrorResponse, request: Request, config: Config);
+    constructor(message: string, response: AxiosErrorResponse | Error, request: Request, config: Config);
 }
 
-export { type AcceptedBody, type AxiosDefReq, AxiosDefaultRequest, AxiosErrorClone as AxiosError, type AxiosErrorResponse, AxiosHeaders, AxiosReq as AxiosRequest, type AxiosResponse, type Config, ContTypeValue, ContentType, type CorsMode, type Create, DELETE, GET, HEAD, type Methods, type OptionalProps, type OptionalReqValues, PATCH, POST, PUT, type ReqActions, type ReqUpdateActions, type TransformResponse, bodyActionssArr, _default as default, defaultHeaders, defaultTimeOut, type jsonObj, type nullableBody, type nullableString, type stringKeyValue };
+export { type AcceptedBody, type AxiosDefReq, AxiosDefaultRequest, AxiosErrorClone as AxiosError, type AxiosErrorResponse, AxiosHeaders, AxiosReq as AxiosRequest, type AxiosResponse, type Config, ContTypeValue, ContentType, type CorsMode, type Create, DEFTIMEOUT, DELETE, GET, HEAD, type Methods, type OptionalProps, type OptionalReqValues, PATCH, POST, PUT, type ReqActions, type ReqUpdateActions, type TransformResponse, bodyActionssArr, _default as default, defaultHeaders, type jsonObj, type nullableBody, type nullableString, type stringKeyValue };

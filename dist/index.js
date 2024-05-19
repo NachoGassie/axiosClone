@@ -26,6 +26,7 @@ __export(src_exports, {
   AxiosRequest: () => AxiosReq,
   ContTypeValue: () => ContTypeValue,
   ContentType: () => ContentType,
+  DEFTIMEOUT: () => DEFTIMEOUT,
   DELETE: () => DELETE,
   GET: () => GET,
   HEAD: () => HEAD,
@@ -34,8 +35,7 @@ __export(src_exports, {
   PUT: () => PUT,
   bodyActionssArr: () => bodyActionssArr,
   default: () => src_default,
-  defaultHeaders: () => defaultHeaders,
-  defaultTimeOut: () => defaultTimeOut
+  defaultHeaders: () => defaultHeaders
 });
 module.exports = __toCommonJS(src_exports);
 
@@ -57,7 +57,7 @@ var DELETE = "DELETE";
 var bodyActionssArr = [POST, PUT, PATCH];
 
 // src/defaulltValues/defaultValues.ts
-var defaultTimeOut = -1;
+var DEFTIMEOUT = -1;
 var defaultHeaders = {
   "Content-Type": "application/json",
   "Accept": "application/json, text/plain, */*"
@@ -112,21 +112,27 @@ var AxiosErrorClone = class _AxiosErrorClone extends Error {
   }
 };
 
-// src/utils/utils.ts
-function getFullUrl(initUrl, queries, params) {
-  const parsedParams = params ? getParamsUrl(params) : "";
-  const parsedQueries = queries ? getQueriesUrl(queries) : "";
-  return `${initUrl}${parsedParams}${parsedQueries}`;
+// src/lib/AxiosConfig.ts
+var AxiosConfig = class {
+  url;
+  headers;
+  method;
+  timeout;
+  transformResponse;
+  constructor(url, headers, method, timeout, transformResponse) {
+    this.url = url;
+    this.headers = headers;
+    this.method = method;
+    this.timeout = timeout;
+    this.transformResponse = transformResponse;
+  }
+};
+
+// src/utils/body.utils.ts
+function hasBody(method) {
+  return bodyActionssArr.includes(method.action);
 }
-function getParamsUrl(params) {
-  const paramsArr = Object.entries(params).map(([key, value]) => `/${key}/${value}`);
-  return paramsArr.join("");
-}
-function getQueriesUrl(queries) {
-  const queriesUrl = new URLSearchParams(queries).toString();
-  return `?${queriesUrl}`;
-}
-function getBody(tmpBody) {
+function parseReqBody(tmpBody) {
   if (!(typeof tmpBody === "string") && !(tmpBody instanceof FormData) && !(tmpBody instanceof Blob) && !(tmpBody instanceof URLSearchParams)) {
     return {
       tmpBody: JSON.stringify(tmpBody),
@@ -141,7 +147,6 @@ function getBody(tmpBody) {
 function getContType(body) {
   if (body instanceof Blob)
     return ContTypeValue.octetStream;
-  const bodyType = typeof body;
   if (typeof body === "string") {
     try {
       JSON.parse(body);
@@ -152,7 +157,24 @@ function getContType(body) {
   }
   return ContTypeValue.AppJson;
 }
-function getHeaders(headers) {
+
+// src/utils/url.utils.ts
+function getFullUrl(initUrl, queries, params) {
+  const parsedParams = params ? getParamsUrl(params) : "";
+  const parsedQueries = queries ? getQueriesUrl(queries) : "";
+  return `${initUrl}${parsedParams}${parsedQueries}`;
+}
+function getParamsUrl(params) {
+  const paramsArr = Object.entries(params).map(([key, value]) => `/${key}/${value}`);
+  return paramsArr.join("");
+}
+function getQueriesUrl(queries) {
+  const queriesUrl = new URLSearchParams(queries).toString();
+  return `?${queriesUrl}`;
+}
+
+// src/utils/header.utils.ts
+function getResHeaders(headers) {
   const tmpHeaders = {};
   const keys = headers.entries();
   let k = keys.next();
@@ -163,34 +185,118 @@ function getHeaders(headers) {
   }
   return { ...tmpHeaders, ...headers };
 }
-var isBody = (method) => bodyActionssArr.includes(method.action);
 
 // src/axiosClone.ts
+async function requestMaker(initUrl, method, options) {
+  const {
+    queries,
+    params,
+    transformResponse,
+    ...restOptions
+  } = options ?? {};
+  const url = getFullUrl(initUrl, queries, params);
+  try {
+    const {
+      res,
+      req: request,
+      headers: reqHeaders,
+      action,
+      timeout
+    } = await handleRequest(url, method, restOptions);
+    const resHeaders = getResHeaders(res.headers);
+    let data = action !== HEAD ? await res.json() : {};
+    const { status, statusText } = res;
+    const config = new AxiosConfig(url, reqHeaders, action, timeout, transformResponse);
+    if (!res.ok) {
+      const response = { config, data, headers: resHeaders, request, status, statusText };
+      const message = `Request failed with a status code ${status}`;
+      throw new AxiosErrorClone(message, response, request, config);
+    }
+    if (transformResponse)
+      data = transformResponse(data);
+    return {
+      data,
+      status,
+      statusText,
+      headers: resHeaders,
+      config,
+      request
+    };
+  } catch (err) {
+    if (err instanceof Error) {
+      const { headers, timeout, credentials, cache, mode } = restOptions;
+      const { action } = method;
+      const config = new AxiosConfig(
+        url,
+        headers ?? {},
+        action,
+        timeout ?? DEFTIMEOUT,
+        transformResponse
+      );
+      const axiosHeaders = new AxiosHeaders(headers);
+      const body = getBodyForReq(method, axiosHeaders);
+      const req = new AxiosReq(url, action, body, headers, mode, cache, credentials);
+      throw new AxiosErrorClone(err.message, err, req, config);
+    }
+    throw new Error("unknown error ocurred");
+  }
+}
+async function handleRequest(url, method, options) {
+  const {
+    headers: initHeaders,
+    timeout: initTimeout,
+    credentials,
+    cache,
+    mode
+  } = options;
+  const timeout = initTimeout ?? DEFTIMEOUT;
+  const { action } = method;
+  const headers = new AxiosHeaders(initHeaders);
+  const body = getBodyForReq(method, headers);
+  const req = new AxiosReq(url, action, body, headers, mode, cache, credentials);
+  const res = await handleFetch(req, timeout);
+  return { res, req, headers, action, timeout };
+}
+function getBodyForReq(method, headers) {
+  if (!hasBody(method))
+    return null;
+  const { tmpBody, contType } = parseReqBody(method.body);
+  if (contType === "")
+    headers.delete(ContentType);
+  else
+    headers.set(ContentType, contType);
+  return tmpBody;
+}
+function handleFetch(req, timeout) {
+  const controller = new AbortController();
+  const signal = controller.signal;
+  if (timeout > DEFTIMEOUT)
+    setTimeout(() => controller.abort(), timeout);
+  return fetch(req, { signal });
+}
 function create(defOptions) {
   const { baseURL, headers: instanceHeaders, timeout } = defOptions;
   const makeRequest = (url, method, call) => {
     const { headers: callHeaders, ...options } = call ?? {};
     const fullUrl = `${baseURL}${url}`;
-    let headers = void 0;
-    if (instanceHeaders && !callHeaders)
-      headers = new Headers(instanceHeaders);
-    if (callHeaders && !instanceHeaders)
-      headers = new Headers(callHeaders);
-    if (instanceHeaders && callHeaders) {
-      headers = new Headers({ ...instanceHeaders, ...callHeaders });
-    }
+    const headers = new Headers({ ...instanceHeaders, ...callHeaders });
     return requestMaker(fullUrl, method, {
       headers,
       timeout,
       ...options
     });
   };
-  const get2 = (url, instance) => makeRequest(url, { action: GET }, instance);
-  const post2 = (url, body, instance) => makeRequest(url, { action: POST, body }, instance);
-  const put2 = (url, body, instance) => makeRequest(url, { action: PUT, body }, instance);
-  const patch2 = (url, body, instance) => makeRequest(url, { action: PATCH, body }, instance);
-  const remove2 = (url, instance) => makeRequest(url, { action: DELETE }, instance);
-  return { get: get2, post: post2, put: put2, patch: patch2, remove: remove2 };
+  const head2 = (url, call) => makeRequest(url, { action: HEAD }, call);
+  const get2 = (url, call) => makeRequest(url, { action: GET }, call);
+  const post2 = (url, body, call) => makeRequest(url, { action: POST, body }, call);
+  const put2 = (url, body, call) => makeRequest(url, { action: PUT, body }, call);
+  const patch2 = (url, body, call) => makeRequest(url, { action: PATCH, body }, call);
+  const remove2 = (url, call) => makeRequest(url, { action: DELETE }, call);
+  return { head: head2, get: get2, post: post2, put: put2, patch: patch2, remove: remove2 };
+}
+async function head(url, options) {
+  const method = { action: HEAD };
+  return await requestMaker(url, method, options);
 }
 async function get(url, options) {
   const method = { action: GET };
@@ -212,78 +318,9 @@ async function remove(url, options) {
   const method = { action: DELETE };
   return await requestMaker(url, method, options);
 }
-async function requestMaker(initUrl, method, options) {
-  const {
-    queries,
-    params,
-    transformResponse,
-    ...restOptions
-  } = options ?? {};
-  const url = getFullUrl(initUrl, queries, params);
-  const {
-    res,
-    req: request,
-    headers: reqHeaders,
-    action,
-    timeout
-  } = await handleRequest(url, method, restOptions);
-  const resHeaders = getHeaders(res.headers);
-  let data = await res.json();
-  const { status, statusText } = res;
-  const config = { url, headers: reqHeaders, method: action, timeout, transformResponse };
-  if (!res.ok) {
-    const response = { config, data, headers: resHeaders, request, status, statusText };
-    const message = `Request failed with a status code ${status}`;
-    throw new AxiosErrorClone(message, response, request, config);
-  }
-  if (transformResponse)
-    data = transformResponse(data);
-  return {
-    data,
-    status,
-    statusText,
-    headers: resHeaders,
-    config,
-    request
-  };
-}
-async function handleRequest(url, method, options) {
-  const {
-    headers: initHeaders,
-    timeout: initTimeout,
-    credentials,
-    cache,
-    mode
-  } = options;
-  const timeout = initTimeout ?? defaultTimeOut;
-  const { action } = method;
-  let headers;
-  if (initHeaders)
-    headers = new AxiosHeaders(initHeaders);
-  else
-    headers = new AxiosHeaders();
-  let body = null;
-  if (isBody(method)) {
-    const { tmpBody, contType } = getBody(method.body);
-    body = tmpBody;
-    if (contType === "")
-      headers.delete(ContentType);
-    else
-      headers.set(ContentType, contType);
-  }
-  const req = new AxiosReq(url, action, body, headers, mode, cache, credentials);
-  const res = await fetchTimeOut(req, timeout);
-  return { res, req, headers, action, timeout };
-}
-function fetchTimeOut(req, timeout) {
-  const controller = new AbortController();
-  const signal = controller.signal;
-  if (timeout > defaultTimeOut)
-    setTimeout(() => controller.abort(), timeout);
-  return fetch(req, { signal });
-}
 var axiosClone_default = {
   create,
+  head,
   get,
   post,
   put,
@@ -301,6 +338,7 @@ var src_default = axiosClone_default;
   AxiosRequest,
   ContTypeValue,
   ContentType,
+  DEFTIMEOUT,
   DELETE,
   GET,
   HEAD,
@@ -308,6 +346,5 @@ var src_default = axiosClone_default;
   POST,
   PUT,
   bodyActionssArr,
-  defaultHeaders,
-  defaultTimeOut
+  defaultHeaders
 });
