@@ -2,7 +2,7 @@ import { ContentType, DELETE, GET, HEAD, PATCH, POST, PUT } from "./constants";
 import { DEFTIMEOUT } from "./defaulltValues";
 import { AxiosError, AxiosHeaders, AxiosRequest } from './lib';
 import { AxiosConfig } from "./lib/AxiosConfig";
-import { AcceptedBody, AxiosResponse, Create, OptionalProps, OptionalReqValues, ReqActions } from "./types";
+import { AcceptedBody, AxiosResponse, Create, Methods, OptionalProps, OptionalReqValues, ReqActions } from "./types";
 import { parseReqBody, getFullUrl, getResHeaders, hasBody } from "./utils";
 
 async function requestMaker<T>(
@@ -20,8 +20,11 @@ async function requestMaker<T>(
     } = await handleRequest<T>(url, method, restOptions);
   
     const resHeaders = getResHeaders(res.headers);
+    const contentType = res.headers.get("content-type");
   
-    let data = action !== HEAD ? await res.json() : {};
+    let data = action !== HEAD ? await parseBodyResp<T>(contentType, res) : {};
+    if (transformResponse) data = transformResponse(data);
+
     const { status, statusText } = res;
 
     const config = new AxiosConfig<T>(url, reqHeaders, action, timeout, transformResponse)
@@ -33,7 +36,6 @@ async function requestMaker<T>(
       throw new AxiosError(message, response, request, config);
     }
   
-    if (transformResponse) data = transformResponse(data);
   
     return { 
       data, status, statusText, headers: resHeaders, config, request,
@@ -84,6 +86,12 @@ function getBodyForReq(method: ReqActions, headers: AxiosHeaders){
   else headers.set(ContentType, contType);
 
   return tmpBody;
+}
+
+async function parseBodyResp<T>(contentType: string | null, res: Response){
+  const parsedContentType = contentType?.split(';')[0];
+  if (parsedContentType === 'text/html') return res.text();
+  return res.json();
 }
 
 function handleFetch(req: Request, timeout: number){

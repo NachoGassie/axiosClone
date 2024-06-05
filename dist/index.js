@@ -204,7 +204,10 @@ async function requestMaker(initUrl, method, options) {
       timeout
     } = await handleRequest(url, method, restOptions);
     const resHeaders = getResHeaders(res.headers);
-    let data = action !== HEAD ? await res.json() : {};
+    const contentType = res.headers.get("content-type");
+    let data = action !== HEAD ? await parseBodyResp(contentType, res) : {};
+    if (transformResponse)
+      data = transformResponse(data);
     const { status, statusText } = res;
     const config = new AxiosConfig(url, reqHeaders, action, timeout, transformResponse);
     if (!res.ok) {
@@ -212,8 +215,6 @@ async function requestMaker(initUrl, method, options) {
       const message = `Request failed with a status code ${status}`;
       throw new AxiosErrorClone(message, response, request, config);
     }
-    if (transformResponse)
-      data = transformResponse(data);
     return {
       data,
       status,
@@ -266,6 +267,12 @@ function getBodyForReq(method, headers) {
   else
     headers.set(ContentType, contType);
   return tmpBody;
+}
+async function parseBodyResp(contentType, res) {
+  const parsedContentType = contentType?.split(";")[0];
+  if (parsedContentType === "text/html")
+    return res.text();
+  return res.json();
 }
 function handleFetch(req, timeout) {
   const controller = new AbortController();
